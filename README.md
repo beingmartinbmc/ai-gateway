@@ -40,13 +40,27 @@ SPRING_MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<database>?<options
 
 On first startup the app auto-creates the `llm_request_info` collection (Mongo creates it implicitly on first insert) and a TTL index on `created_at` (`expireAfter = P90D` ≈ 3 months) — driven by `@Indexed(expireAfter = "P90D")` on the entity plus `spring.data.mongodb.auto-index-creation=true`.
 
+### Supabase semantic cache (optional)
+
+By default the semantic cache is in-memory. To make it persistent across Railway restarts, create a Supabase Postgres database, enable pgvector, and set:
+
+```bash
+AI_GATEWAY_CACHE_STORE=supabase
+SUPABASE_DB_JDBC_URL=jdbc:postgresql://<host>:6543/postgres?sslmode=require
+SUPABASE_DB_USERNAME=<user>
+SUPABASE_DB_PASSWORD=<password>
+```
+
+The app initializes the pgvector schema by default (`SUPABASE_VECTOR_INITIALIZE_SCHEMA=true`) and stores cache entries in `public.semantic_cache`. The default embedding dimension is `1536`, matching `text-embedding-3-small`.
+
 ### Other knobs in `application.properties`
 
 | Property | Default | Meaning |
 |---|---|---|
 | `ai-gateway.cache.enabled` | `true` | Toggle semantic cache. |
+| `ai-gateway.cache.store` | `in-memory` | Cache backend: `in-memory` or `supabase`. |
 | `ai-gateway.cache.similarity-threshold` | `0.92` | Cosine-similarity above which a cached answer is reused. |
-| `ai-gateway.cache.max-entries` | `500` | Hard cap on in-memory cache size (FIFO eviction). |
+| `ai-gateway.cache.max-entries` | `500` | Local insertion-order cap for cache entries. |
 | `ai-gateway.cache.ttl-seconds` | `3600` | Per-entry TTL — older hits are evicted lazily on lookup. `0` disables. |
 | `ai-gateway.cache.skip-when-attachment` | `true` | Bypass cache when a file/image is attached. |
 | `ai-gateway.rate-limit.capacity` | `30` | Tokens per bucket. |
@@ -91,7 +105,7 @@ Response shape:
 }
 ```
 
-`cached: true` with a `similarity` score means the answer came from the in-memory semantic cache.
+`cached: true` with a `similarity` score means the answer came from the semantic cache.
 
 ## 3. Build the Docker image
 
@@ -109,6 +123,10 @@ docker run --rm -p 8080:8080 -e OPENAI_API_KEY=sk-... ai-gateway:local
 railway init                         # create a new Railway project
 railway variables set OPENAI_API_KEY=sk-...
 railway variables set SPRING_MONGODB_URI=...        # your Atlas connection string (incl. db name)
+railway variables set AI_GATEWAY_CACHE_STORE=supabase
+railway variables set SUPABASE_DB_JDBC_URL=...
+railway variables set SUPABASE_DB_USERNAME=...
+railway variables set SUPABASE_DB_PASSWORD=...
 railway up                           # builds the Dockerfile and deploys
 railway domain                       # mint a public URL
 ```

@@ -35,6 +35,7 @@ public class SemanticCacheService {
 
     private static final String META_ANSWER = "answer";
     private static final String META_QUERY = "query";
+    private static final String META_CREATED_AT = "createdAt";
 
     private final VectorStore vectorStore;
     private final AiGatewayProperties props;
@@ -56,9 +57,9 @@ public class SemanticCacheService {
                 return Optional.empty();
             }
             Document doc = results.getFirst();
-            if (isExpired(doc.getId())) {
+            if (isExpired(doc)) {
                 evict(doc.getId());
-                log.debug("Semantic cache entry expired (id={}) \u2014 treated as miss", doc.getId());
+                log.debug("Semantic cache entry expired (id={}) - treated as miss", doc.getId());
                 return Optional.empty();
             }
             Object answer = doc.getMetadata().get(META_ANSWER);
@@ -82,27 +83,43 @@ public class SemanticCacheService {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put(META_QUERY, query);
             metadata.put(META_ANSWER, answer);
+            Instant now = Instant.now();
+            metadata.put(META_CREATED_AT, now.toString());
             Document doc = new Document(query, metadata);
             vectorStore.add(List.of(doc));
             insertionOrder.addLast(doc.getId());
-            insertedAt.put(doc.getId(), Instant.now());
+            insertedAt.put(doc.getId(), now);
             evictIfNeeded();
         } catch (Exception e) {
             log.warn("Semantic cache store failed: {}", e.getMessage());
         }
     }
 
-    private boolean isExpired(String docId) {
+    private boolean isExpired(Document doc) {
         long ttlSec = props.getCache().getTtlSeconds();
         if (ttlSec <= 0) {
             return false;
         }
-        Instant inserted = insertedAt.get(docId);
+        Instant inserted = insertedAt.get(doc.getId());
         if (inserted == null) {
-            // Unknown entry (e.g. survived a restart) — treat as expired so we don't return stale data.
-            return true;
+            inserted = insertedAtFromMetadata(doc);
+            if (inserted != null) {
+                insertedAt.put(doc.getId(), inserted);
+            }
         }
-        return Instant.now().isAfter(inserted.plusSeconds(ttlSec));
+        return inserted == null || Instant.now().isAfter(inserted.plusSeconds(ttlSec));
+    }
+
+    private Instant insertedAtFromMetadata(Document doc) {
+        Object createdAt = doc.getMetadata().get(META_CREATED_AT);
+        if (createdAt == null) {
+            return null;
+        }
+        try {
+            return Instant.parse(createdAt.toString());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void evict(String docId) {
