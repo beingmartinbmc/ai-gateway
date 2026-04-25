@@ -20,9 +20,11 @@ public class StartupDiagnostics {
 
     @EventListener(ApplicationReadyEvent.class)
     public void logResolvedConfig() {
-        log.info("[startup] spring.data.mongodb.uri = {}",
-                maskMongoUri(env.getProperty("spring.data.mongodb.uri")));
-        log.info("[startup] SPRING_DATA_MONGODB_URI env var present = {}",
+        log.info("[startup] spring.mongodb.uri = {}",
+                maskMongoUri(env.getProperty("spring.mongodb.uri")));
+        log.info("[startup] SPRING_MONGODB_URI env var present = {}",
+                System.getenv("SPRING_MONGODB_URI") != null);
+        log.info("[startup] SPRING_DATA_MONGODB_URI legacy env var present = {}",
                 System.getenv("SPRING_DATA_MONGODB_URI") != null);
         log.info("[startup] spring.ai.openai.api-key length = {}",
                 lengthOf(env.getProperty("spring.ai.openai.api-key")));

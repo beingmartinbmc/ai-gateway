@@ -33,10 +33,10 @@ spring.ai.openai.chat.options.model=gpt-4o-mini
 The full connection URI lives **only** in an env var — never in source. We rely on Spring Boot's relaxed binding, so set:
 
 ```bash
-SPRING_DATA_MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<database>?<options>
+SPRING_MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<database>?<options>
 ```
 
-(The env var name is just the canonical Spring Boot upper-case form of `spring.data.mongodb.uri`.) Make sure the URI includes a database name in the path — that's what writes go to.
+(The env var name is the canonical Spring Boot upper-case form of `spring.mongodb.uri`.) Make sure the URI includes a database name in the path — that's what writes go to.
 
 On first startup the app auto-creates the `llm_request_info` collection (Mongo creates it implicitly on first insert) and a TTL index on `created_at` (`expireAfter = P90D` ≈ 3 months) — driven by `@Indexed(expireAfter = "P90D")` on the entity plus `spring.data.mongodb.auto-index-creation=true`.
 
@@ -108,7 +108,7 @@ docker run --rm -p 8080:8080 -e OPENAI_API_KEY=sk-... ai-gateway:local
 # from the repo root
 railway init                         # create a new Railway project
 railway variables set OPENAI_API_KEY=sk-...
-railway variables set SPRING_DATA_MONGODB_URI=...   # your Atlas connection string (incl. db name)
+railway variables set SPRING_MONGODB_URI=...        # your Atlas connection string (incl. db name)
 railway up                           # builds the Dockerfile and deploys
 railway domain                       # mint a public URL
 ```
