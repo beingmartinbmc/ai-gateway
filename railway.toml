@@ -6,8 +6,8 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-# Spring boot binds to $PORT injected by Railway.
-startCommand = "java $JAVA_OPTS -jar /app/app.jar"
+# Use the Dockerfile's ENTRYPOINT (it already wraps `java $JAVA_OPTS -jar …` in `sh -c`,
+# which Railway's bare `exec` start-command does not do).
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 healthcheckPath = "/actuator/health"
