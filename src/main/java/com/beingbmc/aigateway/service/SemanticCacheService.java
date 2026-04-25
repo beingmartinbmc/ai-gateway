@@ -8,10 +8,12 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
@@ -20,8 +22,11 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * On each call we embed the incoming query, do a top-1 similarity search,
  * and return the cached answer if similarity >= configured threshold.
  * <p>
- * Bounded size: we keep insertion order in a deque and evict the oldest
- * entry when {@code maxEntries} is reached (simple FIFO LRU-ish policy).
+ * Eviction strategy:
+ *   1. <b>TTL</b> (lazy): on lookup, if the matched entry is older than
+ *      {@code ai-gateway.cache.ttl-seconds}, it is removed and treated as a miss.
+ *   2. <b>Size cap</b>: when more than {@code maxEntries} live, the oldest
+ *      entry (FIFO insertion order) is evicted.
  */
 @Slf4j
 @Service
@@ -34,6 +39,7 @@ public class SemanticCacheService {
     private final VectorStore vectorStore;
     private final AiGatewayProperties props;
     private final ConcurrentLinkedDeque<String> insertionOrder = new ConcurrentLinkedDeque<>();
+    private final Map<String, Instant> insertedAt = new ConcurrentHashMap<>();
 
     public Optional<Hit> lookup(String query) {
         if (!props.getCache().isEnabled() || query == null || query.isBlank()) {
@@ -50,6 +56,11 @@ public class SemanticCacheService {
                 return Optional.empty();
             }
             Document doc = results.getFirst();
+            if (isExpired(doc.getId())) {
+                evict(doc.getId());
+                log.debug("Semantic cache entry expired (id={}) \u2014 treated as miss", doc.getId());
+                return Optional.empty();
+            }
             Object answer = doc.getMetadata().get(META_ANSWER);
             Double score = doc.getScore();
             if (answer == null) {
@@ -74,10 +85,34 @@ public class SemanticCacheService {
             Document doc = new Document(query, metadata);
             vectorStore.add(List.of(doc));
             insertionOrder.addLast(doc.getId());
+            insertedAt.put(doc.getId(), Instant.now());
             evictIfNeeded();
         } catch (Exception e) {
             log.warn("Semantic cache store failed: {}", e.getMessage());
         }
+    }
+
+    private boolean isExpired(String docId) {
+        long ttlSec = props.getCache().getTtlSeconds();
+        if (ttlSec <= 0) {
+            return false;
+        }
+        Instant inserted = insertedAt.get(docId);
+        if (inserted == null) {
+            // Unknown entry (e.g. survived a restart) — treat as expired so we don't return stale data.
+            return true;
+        }
+        return Instant.now().isAfter(inserted.plusSeconds(ttlSec));
+    }
+
+    private void evict(String docId) {
+        try {
+            vectorStore.delete(List.of(docId));
+        } catch (Exception e) {
+            log.debug("Cache eviction failed for {}: {}", docId, e.getMessage());
+        }
+        insertionOrder.remove(docId);
+        insertedAt.remove(docId);
     }
 
     private void evictIfNeeded() {
@@ -85,11 +120,7 @@ public class SemanticCacheService {
         while (insertionOrder.size() > max) {
             String oldId = insertionOrder.pollFirst();
             if (oldId != null) {
-                try {
-                    vectorStore.delete(List.of(oldId));
-                } catch (Exception e) {
-                    log.debug("Cache eviction failed for {}: {}", oldId, e.getMessage());
-                }
+                evict(oldId);
             }
         }
     }

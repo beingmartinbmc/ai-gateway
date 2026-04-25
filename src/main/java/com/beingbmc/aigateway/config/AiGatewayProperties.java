@@ -19,6 +19,8 @@ public class AiGatewayProperties {
         private boolean enabled = true;
         private double similarityThreshold = 0.92;
         private int maxEntries = 500;
+        /** Cached entries older than this are evicted. {@code 0} disables TTL. */
+        private long ttlSeconds = 3600;
         private boolean skipWhenAttachment = true;
     }
 

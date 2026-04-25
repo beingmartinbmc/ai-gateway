@@ -30,11 +30,13 @@ spring.ai.openai.chat.options.model=gpt-4o-mini
 
 ### MongoDB (Atlas free tier)
 
-The full connection URI lives **only** in the `MONGODB_URI` env var — never in source. `application.properties` just references it:
+The full connection URI lives **only** in an env var — never in source. We rely on Spring Boot's relaxed binding, so set:
 
-```properties
-spring.data.mongodb.uri=${MONGODB_URI}
+```bash
+SPRING_DATA_MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<database>?<options>
 ```
+
+(The env var name is just the canonical Spring Boot upper-case form of `spring.data.mongodb.uri`.) Make sure the URI includes a database name in the path — that's what writes go to.
 
 On first startup the app auto-creates the `llm_request_info` collection (Mongo creates it implicitly on first insert) and a TTL index on `created_at` (`expireAfter = P90D` ≈ 3 months) — driven by `@Indexed(expireAfter = "P90D")` on the entity plus `spring.data.mongodb.auto-index-creation=true`.
 
@@ -45,6 +47,7 @@ On first startup the app auto-creates the `llm_request_info` collection (Mongo c
 | `ai-gateway.cache.enabled` | `true` | Toggle semantic cache. |
 | `ai-gateway.cache.similarity-threshold` | `0.92` | Cosine-similarity above which a cached answer is reused. |
 | `ai-gateway.cache.max-entries` | `500` | Hard cap on in-memory cache size (FIFO eviction). |
+| `ai-gateway.cache.ttl-seconds` | `3600` | Per-entry TTL — older hits are evicted lazily on lookup. `0` disables. |
 | `ai-gateway.cache.skip-when-attachment` | `true` | Bypass cache when a file/image is attached. |
 | `ai-gateway.rate-limit.capacity` | `30` | Tokens per bucket. |
 | `ai-gateway.rate-limit.refill-tokens` | `30` | Tokens added per refill window. |
@@ -105,7 +108,7 @@ docker run --rm -p 8080:8080 -e OPENAI_API_KEY=sk-... ai-gateway:local
 # from the repo root
 railway init                         # create a new Railway project
 railway variables set OPENAI_API_KEY=sk-...
-railway variables set MONGODB_URI=...   # your Atlas connection string
+railway variables set SPRING_DATA_MONGODB_URI=...   # your Atlas connection string (incl. db name)
 railway up                           # builds the Dockerfile and deploys
 railway domain                       # mint a public URL
 ```
