@@ -1,0 +1,33 @@
+package com.beingbmc.aigateway.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@Getter
+@Setter
+@ConfigurationProperties(prefix = "ai-gateway")
+public class AiGatewayProperties {
+
+    private String systemPrompt = "";
+    private Cache cache = new Cache();
+    private RateLimit rateLimit = new RateLimit();
+
+    @Getter
+    @Setter
+    public static class Cache {
+        private boolean enabled = true;
+        private double similarityThreshold = 0.92;
+        private int maxEntries = 500;
+        private boolean skipWhenAttachment = true;
+    }
+
+    @Getter
+    @Setter
+    public static class RateLimit {
+        private boolean enabled = true;
+        private int capacity = 30;
+        private int refillTokens = 30;
+        private int refillPeriodSeconds = 60;
+    }
+}
