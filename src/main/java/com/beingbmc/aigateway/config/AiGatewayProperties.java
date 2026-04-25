@@ -12,6 +12,8 @@ public class AiGatewayProperties {
     private String systemPrompt = "";
     private Cache cache = new Cache();
     private RateLimit rateLimit = new RateLimit();
+    private Tts tts = new Tts();
+    private VoiceStream voiceStream = new VoiceStream();
 
     @Getter
     @Setter
@@ -50,5 +52,31 @@ public class AiGatewayProperties {
         private int capacity = 10;
         private int refillTokens = 10;
         private int refillPeriodSeconds = 60;
+    }
+
+    @Getter
+    @Setter
+    public static class Tts {
+        private int maxTextChars = 5000;
+        private Deepgram deepgram = new Deepgram();
+    }
+
+    @Getter
+    @Setter
+    public static class Deepgram {
+        private String apiKey = "";
+        private String model = "aura-2-draco-en";
+        private String baseUrl = "https://api.deepgram.com/v1/speak";
+        private int timeoutSeconds = 30;
+    }
+
+    @Getter
+    @Setter
+    public static class VoiceStream {
+        private int maxMessageChars = 4000;
+        private int chunkSize = 30;
+        private int minChunkSize = 15;
+        private int maxChunkSize = 60;
+        private int maxAudioChunks = 12;
     }
 }

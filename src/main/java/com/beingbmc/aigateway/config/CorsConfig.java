@@ -27,6 +27,7 @@ public class CorsConfig implements WebFluxConfigurer {
                 .allowedOrigins(ALLOWED_ORIGINS)
                 .allowedMethods(ALLOWED_METHODS)
                 .allowedHeaders("*")
+                .exposedHeaders("Content-Disposition", "X-RateLimit-Remaining", "Retry-After")
                 .maxAge(3600);
     }
 }
