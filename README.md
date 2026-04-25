@@ -30,13 +30,7 @@ spring.ai.openai.chat.options.model=gpt-4o-mini
 
 ### MongoDB (Atlas free tier)
 
-The full connection URI lives **only** in an env var — never in source:
-
-```bash
-export MONGODB_URI='mongodb+srv://<user>:<password>@beingbmc.k3ctcjy.mongodb.net/ai_gateway?appName=beingbmc'
-```
-
-`application.properties` just references it:
+The full connection URI lives **only** in the `MONGODB_URI` env var — never in source. `application.properties` just references it:
 
 ```properties
 spring.data.mongodb.uri=${MONGODB_URI}
@@ -111,7 +105,7 @@ docker run --rm -p 8080:8080 -e OPENAI_API_KEY=sk-... ai-gateway:local
 # from the repo root
 railway init                         # create a new Railway project
 railway variables set OPENAI_API_KEY=sk-...
-railway variables set MONGODB_URI='mongodb+srv://<user>:<password>@beingbmc.k3ctcjy.mongodb.net/ai_gateway?appName=beingbmc'
+railway variables set MONGODB_URI=...   # your Atlas connection string
 railway up                           # builds the Dockerfile and deploys
 railway domain                       # mint a public URL
 ```
@@ -153,7 +147,3 @@ ChatService (reactive)
 - The semantic cache is an in-memory `SimpleVectorStore` that uses OpenAI embeddings (`text-embedding-3-small` by default) to vectorise prompts; lookups do a cosine top-1 search above the configured threshold.
 - The blocking Spring AI SDK call is dispatched on `Schedulers.boundedElastic()` so the Netty event loop is never blocked.
 - Mongo persistence is fully reactive (`ReactiveMongoRepository`); a TTL index on `created_at` causes Mongo to evict rows older than 90 days automatically.
-
-## 6. Security note
-
-The system prompt in `application.properties` is the single source of truth for the “never reveal infra/code” rule. It is loaded into every `ChatClient` call via `defaultSystem(...)`, so all chat requests inherit it — including when the user uploads a file/image. File/image content is treated as untrusted data, never as instructions.
