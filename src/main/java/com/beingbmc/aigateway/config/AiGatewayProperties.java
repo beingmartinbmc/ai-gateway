@@ -47,8 +47,8 @@ public class AiGatewayProperties {
     @Setter
     public static class RateLimit {
         private boolean enabled = true;
-        private int capacity = 30;
-        private int refillTokens = 30;
+        private int capacity = 10;
+        private int refillTokens = 10;
         private int refillPeriodSeconds = 60;
     }
 }
