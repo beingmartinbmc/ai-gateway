@@ -1,5 +1,7 @@
 package com.beingbmc.aigateway.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
@@ -30,6 +32,13 @@ public class AiConfig {
     @Bean
     public WebClient.Builder webClientBuilder() {
         return WebClient.builder();
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return JsonMapper.builder()
+                .findAndAddModules()
+                .build();
     }
 
     /**
