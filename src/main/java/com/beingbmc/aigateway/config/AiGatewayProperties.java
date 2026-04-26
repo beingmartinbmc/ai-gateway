@@ -14,6 +14,7 @@ public class AiGatewayProperties {
     private RateLimit rateLimit = new RateLimit();
     private Tts tts = new Tts();
     private VoiceStream voiceStream = new VoiceStream();
+    private OpenAiProxy openAiProxy = new OpenAiProxy();
 
     @Getter
     @Setter
@@ -78,5 +79,18 @@ public class AiGatewayProperties {
         private int minChunkSize = 15;
         private int maxChunkSize = 60;
         private int maxAudioChunks = 12;
+    }
+
+    @Getter
+    @Setter
+    public static class OpenAiProxy {
+        private String url = "https://api.openai.com/v1/chat/completions";
+        private String model = "gpt-5-nano";
+        private int maxTokens = 1000;
+        private double temperature = 0.8;
+        private double topP = 0.85;
+        private double frequencyPenalty = 0.4;
+        private double presencePenalty = 0.2;
+        private int timeoutSeconds = 120;
     }
 }

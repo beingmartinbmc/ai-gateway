@@ -4,6 +4,7 @@ A thin Spring Boot 4 / Spring AI 2 / **Spring WebFlux (reactive)** service that 
 
 - **Configurable OpenAI key** in `application.properties` (any OpenAI chat model — `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `o-series`, …).
 - **`POST /api/v1/chat`** — accepts `message` + `context` and **optional** `file` and `image` attachments. Fully non-blocking with `Mono`-based handlers.
+- **`POST /api/v1/openai-proxy`** — accepts OpenAI-style `messages` for long prompt workflows and returns the raw OpenAI response.
 - **`POST /api/v1/tts`** — converts text to Deepgram speech and returns audio bytes.
 - **`POST /api/v1/voice/stream`** — streams chat text plus base64 speech chunks over Server-Sent Events.
 - **In-memory semantic cache** (vector-store backed) — repeat / similar prompts return instantly without re-hitting OpenAI.
@@ -69,6 +70,8 @@ The app initializes the pgvector schema by default (`SUPABASE_VECTOR_INITIALIZE_
 | `ai-gateway.rate-limit.capacity` | `10` | Tokens per bucket. |
 | `ai-gateway.rate-limit.refill-tokens` | `10` | Tokens added per refill window. |
 | `ai-gateway.rate-limit.refill-period-seconds` | `60` | Refill window. |
+| `ai-gateway.open-ai-proxy.model` | `gpt-5-nano` | Default model for the raw OpenAI-compatible proxy. |
+| `ai-gateway.open-ai-proxy.max-tokens` | `1000` | Default output token cap for long prompt proxy calls. |
 | `ai-gateway.tts.max-text-chars` | `5000` | Max text length for standalone TTS. |
 | `ai-gateway.tts.deepgram.model` | `aura-2-draco-en` | Default Deepgram voice model. |
 | `ai-gateway.voice-stream.chunk-size` | `30` | Target word count for each speech chunk. |
@@ -113,6 +116,25 @@ Response shape:
 ```
 
 `cached: true` with a `similarity` score means the answer came from the semantic cache.
+
+### Long prompt OpenAI proxy
+
+Use this endpoint when the caller already has OpenAI-style messages and needs a fast raw proxy response:
+
+```bash
+curl -s http://localhost:8080/api/v1/openai-proxy \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "messages": [
+      {"role":"system","content":"Return only valid JSON."},
+      {"role":"user","content":"Generate a compact Mario-style level JSON."}
+    ]
+  }'
+```
+
+The response is the raw OpenAI chat completion JSON. This path bypasses the semantic cache, Mongo audit persistence, and the `/api/v1/chat` system-prompt wrapper.
+
+You can optionally pass `model`, `maxTokens`, `temperature`, `topP`, `frequencyPenalty`, and `presencePenalty`.
 
 ### Text to speech
 
