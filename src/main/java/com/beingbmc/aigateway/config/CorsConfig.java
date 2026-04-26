@@ -10,7 +10,9 @@ public class CorsConfig implements WebFluxConfigurer {
     private static final String[] ALLOWED_ORIGINS = {
             "https://beingmartinbmc.github.io",
             "https://trisshasantos.github.io",
-            "https://beingabu.github.io"
+            "https://beingabu.github.io",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000"
     };
 
     private static final String[] ALLOWED_METHODS = {
@@ -18,7 +20,8 @@ public class CorsConfig implements WebFluxConfigurer {
             "POST",
             "PUT",
             "DELETE",
-            "PATCH"
+            "PATCH",
+            "OPTIONS"
     };
 
     @Override

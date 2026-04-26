@@ -185,6 +185,20 @@ curl -s 'http://localhost:8080/api/v1/conversations?from=2026-04-01T00:00:00Z&to
 
 Each conversation stores `_id`, `userInput`, `aiResponse`, `timestamp`, and `books` for filtering. Sending `"book":"ALL"` expands to all supported sacred texts.
 
+### Date Counter APIs
+
+The gateway also exposes Mongo-backed APIs for the date-counter app:
+
+```bash
+curl -s 'http://localhost:8080/api/events?limit=100&sortBy=eventDate&sortOrder=asc'
+curl -s http://localhost:8080/api/events?action=create \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Anniversary","eventDate":"2026-05-01","category":"general","metadata":{"labels":["love"],"comments":"Dinner plan"}}'
+curl -s 'http://localhost:8080/api/comments?action=by-event&eventId=<event-id>'
+```
+
+Events are stored in `date_counter_events`; comments are stored in `date_counter_comments`.
+
 ### Text to speech
 
 ```bash
