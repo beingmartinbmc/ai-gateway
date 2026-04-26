@@ -21,6 +21,6 @@ public record OpenAiProxyRequest(List<Message> messages,
                                  Double frequencyPenalty,
                                  Double presencePenalty) {
 
-    public record Message(String role, String content) {
+    public record Message(String role, Object content) {
     }
 }

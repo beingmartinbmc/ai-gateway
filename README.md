@@ -136,6 +136,25 @@ The response is the raw OpenAI chat completion JSON. This path bypasses the sema
 
 The proxy always uses `gpt-4.1-nano`, even if the request includes a different `model`. You can optionally pass `maxTokens`, `temperature`, `topP`, `frequencyPenalty`, and `presencePenalty`.
 
+Multipart image requests are also supported. The uploaded images are attached to the last user message and forwarded to OpenAI as image data URLs:
+
+```bash
+curl -s http://localhost:8080/api/v1/openai-proxy \
+  -F 'messages=[
+    {"role":"system","content":"Answer briefly."},
+    {"role":"user","content":"What is in this image?"}
+  ]' \
+  -F 'image=@/path/to/image.png'
+```
+
+You can also send a full JSON request in a `request` form field:
+
+```bash
+curl -s http://localhost:8080/api/v1/openai-proxy \
+  -F 'request={"maxTokens":500,"messages":[{"role":"user","content":"Describe this image."}]}' \
+  -F 'images=@/path/to/image.jpg'
+```
+
 ### Conversations
 
 Store completed conversations for Epic:
