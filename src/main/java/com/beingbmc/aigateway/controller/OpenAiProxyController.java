@@ -4,7 +4,6 @@ import com.beingbmc.aigateway.dto.OpenAiProxyRequest;
 import com.beingbmc.aigateway.service.OpenAiProxyService;
 import com.beingbmc.aigateway.service.OpenAiProxyService.OpenAiProxyConfigurationException;
 import com.beingbmc.aigateway.service.OpenAiProxyService.OpenAiProxyUpstreamException;
-import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +44,7 @@ public class OpenAiProxyController {
                 .onErrorResume(this::errorResponse);
     }
 
-    private ResponseEntity<Object> ok(JsonNode body) {
+    private ResponseEntity<Object> ok(String body) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body);

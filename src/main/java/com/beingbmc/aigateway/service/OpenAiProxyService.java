@@ -2,7 +2,6 @@ package com.beingbmc.aigateway.service;
 
 import com.beingbmc.aigateway.config.AiGatewayProperties;
 import com.beingbmc.aigateway.dto.OpenAiProxyRequest;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
@@ -35,7 +34,7 @@ public class OpenAiProxyService {
         this.apiKey = apiKey;
     }
 
-    public Mono<JsonNode> complete(OpenAiProxyRequest request) {
+    public Mono<String> complete(OpenAiProxyRequest request) {
         validateRequest(request);
         AiGatewayProperties.OpenAiProxy proxy = props.getOpenAiProxy();
         String model = resolveModel(request.model(), proxy.getModel());
@@ -67,7 +66,7 @@ public class OpenAiProxyService {
                         .defaultIfEmpty("")
                         .flatMap(errorBody -> Mono.error(new OpenAiProxyUpstreamException(
                                 "OpenAI API error: " + response.statusCode().value(), errorBody))))
-                .bodyToMono(JsonNode.class)
+                .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(Math.max(1, proxy.getTimeoutSeconds())));
     }
 
