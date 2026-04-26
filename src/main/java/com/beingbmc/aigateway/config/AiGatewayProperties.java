@@ -85,7 +85,7 @@ public class AiGatewayProperties {
     @Setter
     public static class OpenAiProxy {
         private String url = "https://api.openai.com/v1/chat/completions";
-        private String model = "gpt-5-nano";
+        private String model = "gpt-4.1-nano";
         private int maxTokens = 1000;
         private double temperature = 0.8;
         private double topP = 0.85;

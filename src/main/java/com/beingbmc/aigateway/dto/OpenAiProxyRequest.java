@@ -6,7 +6,7 @@ import java.util.List;
  * OpenAI-compatible request body for longer prompt workflows.
  *
  * @param messages chat messages to forward
- * @param model optional model override
+ * @param model ignored; the proxy always forwards requests to gpt-4.1-nano
  * @param maxTokens optional output token cap
  * @param temperature optional sampling temperature
  * @param topP optional nucleus sampling value

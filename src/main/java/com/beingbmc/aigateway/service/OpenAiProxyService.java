@@ -20,6 +20,7 @@ import java.util.Set;
 @Service
 public class OpenAiProxyService {
 
+    private static final String PROXY_MODEL = "gpt-4.1-nano";
     private static final Set<String> ALLOWED_ROLES = Set.of("system", "developer", "user", "assistant");
 
     private final WebClient webClient;
@@ -37,18 +38,14 @@ public class OpenAiProxyService {
     public Mono<String> complete(OpenAiProxyRequest request) {
         validateRequest(request);
         AiGatewayProperties.OpenAiProxy proxy = props.getOpenAiProxy();
-        String model = resolveModel(request.model(), proxy.getModel());
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", model);
+        body.put("model", PROXY_MODEL);
         body.put("messages", request.messages());
-        body.put(maxTokenParameter(model), positiveOrDefault(request.maxTokens(), proxy.getMaxTokens()));
-
-        if (!isGpt5(model)) {
-            body.put("temperature", numberOrDefault(request.temperature(), proxy.getTemperature()));
-            body.put("top_p", numberOrDefault(request.topP(), proxy.getTopP()));
-            body.put("frequency_penalty", numberOrDefault(request.frequencyPenalty(), proxy.getFrequencyPenalty()));
-            body.put("presence_penalty", numberOrDefault(request.presencePenalty(), proxy.getPresencePenalty()));
-        }
+        body.put("max_tokens", positiveOrDefault(request.maxTokens(), proxy.getMaxTokens()));
+        body.put("temperature", numberOrDefault(request.temperature(), proxy.getTemperature()));
+        body.put("top_p", numberOrDefault(request.topP(), proxy.getTopP()));
+        body.put("frequency_penalty", numberOrDefault(request.frequencyPenalty(), proxy.getFrequencyPenalty()));
+        body.put("presence_penalty", numberOrDefault(request.presencePenalty(), proxy.getPresencePenalty()));
 
         if (isBlank(apiKey)) {
             return Mono.error(new OpenAiProxyConfigurationException("OpenAI API key is not configured"));
@@ -92,14 +89,6 @@ public class OpenAiProxyService {
         }
     }
 
-    private String resolveModel(String requested, String configured) {
-        String model = isBlank(requested) ? configured : requested.trim();
-        if (isBlank(model)) {
-            throw new IllegalArgumentException("Model is required");
-        }
-        return model;
-    }
-
     private int positiveOrDefault(Integer value, int defaultValue) {
         int resolved = value != null ? value : defaultValue;
         if (resolved < 1) {
@@ -110,14 +99,6 @@ public class OpenAiProxyService {
 
     private double numberOrDefault(Double value, double defaultValue) {
         return value != null ? value : defaultValue;
-    }
-
-    private String maxTokenParameter(String model) {
-        return isGpt5(model) ? "max_completion_tokens" : "max_tokens";
-    }
-
-    private boolean isGpt5(String model) {
-        return model != null && model.toLowerCase(Locale.ROOT).startsWith("gpt-5");
     }
 
     private boolean isBlank(String value) {

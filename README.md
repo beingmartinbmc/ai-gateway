@@ -70,7 +70,7 @@ The app initializes the pgvector schema by default (`SUPABASE_VECTOR_INITIALIZE_
 | `ai-gateway.rate-limit.capacity` | `10` | Tokens per bucket. |
 | `ai-gateway.rate-limit.refill-tokens` | `10` | Tokens added per refill window. |
 | `ai-gateway.rate-limit.refill-period-seconds` | `60` | Refill window. |
-| `ai-gateway.open-ai-proxy.model` | `gpt-5-nano` | Default model for the raw OpenAI-compatible proxy. |
+| `ai-gateway.open-ai-proxy.model` | `gpt-4.1-nano` | Raw proxy model. Client-provided model values are ignored. |
 | `ai-gateway.open-ai-proxy.max-tokens` | `1000` | Default output token cap for long prompt proxy calls. |
 | `ai-gateway.tts.max-text-chars` | `5000` | Max text length for standalone TTS. |
 | `ai-gateway.tts.deepgram.model` | `aura-2-draco-en` | Default Deepgram voice model. |
@@ -134,7 +134,7 @@ curl -s http://localhost:8080/api/v1/openai-proxy \
 
 The response is the raw OpenAI chat completion JSON. This path bypasses the semantic cache, Mongo audit persistence, and the `/api/v1/chat` system-prompt wrapper.
 
-You can optionally pass `model`, `maxTokens`, `temperature`, `topP`, `frequencyPenalty`, and `presencePenalty`.
+The proxy always uses `gpt-4.1-nano`, even if the request includes a different `model`. You can optionally pass `maxTokens`, `temperature`, `topP`, `frequencyPenalty`, and `presencePenalty`.
 
 ### Text to speech
 
