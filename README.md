@@ -136,6 +136,36 @@ The response is the raw OpenAI chat completion JSON. This path bypasses the sema
 
 The proxy always uses `gpt-4.1-nano`, even if the request includes a different `model`. You can optionally pass `maxTokens`, `temperature`, `topP`, `frequencyPenalty`, and `presencePenalty`.
 
+### Conversations
+
+Store completed conversations for Epic:
+
+```bash
+curl -s http://localhost:8080/api/v1/conversations \
+  -H 'Content-Type: application/json' \
+  -d '{"userInput":"What should I focus on today?","aiResponse":"Focus on one meaningful action.","timestamp":"2026-04-26T04:00:00Z","book":"BHAGAVAD_GITA"}'
+```
+
+List recent conversations:
+
+```bash
+curl -s 'http://localhost:8080/api/v1/conversations?page=1&limit=20&order=desc'
+```
+
+Filter by sacred text:
+
+```bash
+curl -s 'http://localhost:8080/api/v1/conversations?page=1&limit=20&book=QURAN'
+```
+
+Filter by time range:
+
+```bash
+curl -s 'http://localhost:8080/api/v1/conversations?from=2026-04-01T00:00:00Z&to=2026-04-30T23:59:59Z'
+```
+
+Each conversation stores `_id`, `userInput`, `aiResponse`, `timestamp`, and `books` for filtering. Sending `"book":"ALL"` expands to all supported sacred texts.
+
 ### Text to speech
 
 ```bash
