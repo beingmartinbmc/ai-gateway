@@ -12,6 +12,7 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
@@ -28,6 +30,7 @@ public class OpenAiProxyService {
 
     private static final String PROXY_MODEL = "gpt-4.1-nano";
     private static final Set<String> ALLOWED_ROLES = Set.of("system", "developer", "user", "assistant");
+    private static final int MAX_RETRY_ATTEMPTS = 2;
 
     private final WebClient webClient;
     private final AiGatewayProperties props;
@@ -71,6 +74,7 @@ public class OpenAiProxyService {
             return Mono.error(new OpenAiProxyConfigurationException("OpenAI API key is not configured"));
         }
 
+        long startNanos = System.nanoTime();
         return webClient.post()
                 .uri(proxy.getUrl())
                 .headers(headers -> {
@@ -82,9 +86,22 @@ public class OpenAiProxyService {
                 .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
                         .defaultIfEmpty("")
                         .flatMap(errorBody -> Mono.error(new OpenAiProxyUpstreamException(
-                                "OpenAI API error: " + response.statusCode().value(), errorBody))))
+                                "OpenAI API error: " + response.statusCode().value(),
+                                response.statusCode().value(),
+                                errorBody))))
                 .bodyToMono(String.class)
-                .timeout(Duration.ofSeconds(Math.max(1, proxy.getTimeoutSeconds())));
+                .timeout(Duration.ofSeconds(Math.max(1, proxy.getTimeoutSeconds())))
+                .retryWhen(Retry.backoff(MAX_RETRY_ATTEMPTS, Duration.ofMillis(500))
+                        .maxBackoff(Duration.ofSeconds(4))
+                        .filter(this::isRetryable)
+                        .doBeforeRetry(signal -> log.warn(
+                                "Retrying OpenAI proxy request after {} (attempt {}/{})",
+                                signal.failure().getClass().getSimpleName(),
+                                signal.totalRetries() + 1,
+                                MAX_RETRY_ATTEMPTS)))
+                .doOnSuccess(ignored -> log.debug("OpenAI proxy completed in {} ms", elapsedMillis(startNanos)))
+                .doOnError(error -> log.warn("OpenAI proxy failed in {} ms: {}",
+                        elapsedMillis(startNanos), error.toString()));
     }
 
     private void validateRequest(OpenAiProxyRequest request) {
@@ -198,6 +215,21 @@ public class OpenAiProxyService {
         return false;
     }
 
+    private boolean isRetryable(Throwable error) {
+        if (error instanceof TimeoutException) {
+            return true;
+        }
+        if (error instanceof OpenAiProxyUpstreamException upstream) {
+            int statusCode = upstream.statusCode();
+            return statusCode == 429 || statusCode >= 500;
+        }
+        return false;
+    }
+
+    private long elapsedMillis(long startNanos) {
+        return Duration.ofNanos(System.nanoTime() - startNanos).toMillis();
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
@@ -209,11 +241,17 @@ public class OpenAiProxyService {
     }
 
     public static class OpenAiProxyUpstreamException extends RuntimeException {
+        private final int statusCode;
         private final String responseBody;
 
-        public OpenAiProxyUpstreamException(String message, String responseBody) {
+        public OpenAiProxyUpstreamException(String message, int statusCode, String responseBody) {
             super(message);
+            this.statusCode = statusCode;
             this.responseBody = responseBody;
+        }
+
+        public int statusCode() {
+            return statusCode;
         }
 
         public String responseBody() {
