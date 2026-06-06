@@ -2,6 +2,8 @@ package com.beingbmc.aigateway.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.unit.DataSize;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
@@ -30,8 +32,11 @@ public class AiConfig {
     }
 
     @Bean
-    public WebClient.Builder webClientBuilder() {
-        return WebClient.builder();
+    public WebClient.Builder webClientBuilder(
+            @Value("${spring.codec.max-in-memory-size:32MB}") DataSize maxInMemorySize) {
+        int maxBytes = (int) maxInMemorySize.toBytes();
+        return WebClient.builder()
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(maxBytes));
     }
 
     @Bean

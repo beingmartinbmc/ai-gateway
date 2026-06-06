@@ -168,7 +168,7 @@ public class OpenAiProxyController {
     private Mono<ResponseEntity<Object>> errorResponse(Throwable error) {
         HttpStatus status;
         String message;
-        if (error instanceof DataBufferLimitException) {
+        if (hasCause(error, DataBufferLimitException.class)) {
             status = HttpStatus.CONTENT_TOO_LARGE;
             message = "Request payload too large. Send fewer or smaller images.";
         } else if (error instanceof IllegalArgumentException) {
@@ -189,5 +189,17 @@ public class OpenAiProxyController {
         return Mono.just(ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("error", message)));
+    }
+
+    private boolean hasCause(Throwable error, Class<? extends Throwable> type) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (type.isInstance(current)) {
+                return true;
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+        }
+        return false;
     }
 }
