@@ -46,6 +46,7 @@ public class OpenAiProxyController {
                     @ApiResponse(responseCode = "200", description = "Raw OpenAI chat completion response"),
                     @ApiResponse(responseCode = "400", description = "Invalid messages payload"),
                     @ApiResponse(responseCode = "413", description = "Request payload exceeds the size limit"),
+                    @ApiResponse(responseCode = "429", description = "Upstream model rate limited"),
                     @ApiResponse(responseCode = "502", description = "OpenAI upstream error")
             })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -177,6 +178,9 @@ public class OpenAiProxyController {
         } else if (error instanceof OpenAiProxyConfigurationException) {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
             message = "OpenAI API is not configured";
+        } else if (error instanceof OpenAiProxyUpstreamException upstream && upstream.statusCode() == 429) {
+            status = HttpStatus.TOO_MANY_REQUESTS;
+            message = "Upstream model is rate limited. Please retry in a few seconds.";
         } else if (error instanceof OpenAiProxyUpstreamException || error instanceof TimeoutException) {
             status = HttpStatus.BAD_GATEWAY;
             message = "OpenAI request failed";

@@ -98,7 +98,10 @@ public class OpenAiProxyService {
                                 "Retrying OpenAI proxy request after {} (attempt {}/{})",
                                 signal.failure().getClass().getSimpleName(),
                                 signal.totalRetries() + 1,
-                                MAX_RETRY_ATTEMPTS)))
+                                MAX_RETRY_ATTEMPTS))
+                        // Surface the original upstream failure (e.g. 429/5xx/timeout) instead of
+                        // Reactor's RetryExhaustedException so the controller can map it correctly.
+                        .onRetryExhaustedThrow((spec, signal) -> signal.failure()))
                 .doOnSuccess(ignored -> log.debug("OpenAI proxy completed in {} ms", elapsedMillis(startNanos)))
                 .doOnError(error -> log.warn("OpenAI proxy failed in {} ms: {}",
                         elapsedMillis(startNanos), error.toString()));
