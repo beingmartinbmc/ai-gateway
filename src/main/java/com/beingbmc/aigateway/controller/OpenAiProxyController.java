@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,7 @@ public class OpenAiProxyController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Raw OpenAI chat completion response"),
                     @ApiResponse(responseCode = "400", description = "Invalid messages payload"),
+                    @ApiResponse(responseCode = "413", description = "Request payload exceeds the size limit"),
                     @ApiResponse(responseCode = "502", description = "OpenAI upstream error")
             })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -166,7 +168,10 @@ public class OpenAiProxyController {
     private Mono<ResponseEntity<Object>> errorResponse(Throwable error) {
         HttpStatus status;
         String message;
-        if (error instanceof IllegalArgumentException) {
+        if (error instanceof DataBufferLimitException) {
+            status = HttpStatus.CONTENT_TOO_LARGE;
+            message = "Request payload too large. Send fewer or smaller images.";
+        } else if (error instanceof IllegalArgumentException) {
             status = HttpStatus.BAD_REQUEST;
             message = error.getMessage();
         } else if (error instanceof OpenAiProxyConfigurationException) {
